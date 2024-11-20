@@ -1,0 +1,4 @@
+/target
+.env
+history.txt
+.DS_Store
