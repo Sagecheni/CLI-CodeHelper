@@ -1,6 +1,6 @@
 [package]
 name = "cli-helper"
-version = "0.1.0"
+version = "0.2.0"
 edition = "2021"
 authors = ["Sage Chen <sagecheni@outlook.com>"]
 description = "A CLI tool for interacting with OpenAI API"
@@ -21,3 +21,5 @@ spinners = "4.1"
 chrono= "0.4"
 rand = "0.8"
 eventsource-stream = "0.2"
+directories = "5.0"
+dirs = "5.0"

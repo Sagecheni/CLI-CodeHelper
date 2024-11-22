@@ -1,7 +1,11 @@
 use crate::api::models::Message;
 use colored::*;
 use spinners::{Spinner, Spinners};
-use std::{io::{self, Write}, thread, time::Duration};
+use std::{
+    io::{self, Write},
+    thread,
+    time::Duration,
+};
 pub struct DisplayManager;
 
 impl DisplayManager {
@@ -67,7 +71,7 @@ impl DisplayManager {
                 "assistant" => ("Assistant".blue().bold(), msg.content.white()),
                 _ => ("Unknown".red().bold(), msg.content.red()),
             };
-            
+
             // 添加时间戳
             let timestamp = chrono::Local::now().format("%H:%M:%S");
             println!("[{}] {}", timestamp.to_string().bright_black(), prefix);

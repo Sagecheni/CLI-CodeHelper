@@ -1,23 +1,34 @@
+use super::config::{ApiConfig, ChatModel};
 use crate::api::models::*;
 use anyhow::{Context, Result};
 use reqwest::Client;
 use std::io::Write;
 pub struct OpenAIClient {
     client: Client,
-    api_key: String,
+    config: ApiConfig,
     messages: Vec<Message>,
 }
 
 impl OpenAIClient {
     pub fn new() -> Result<Self> {
-        let api_key = std::env::var("OPENAI_API_KEY")
-            .context("OPENAI_API_KEY environment variable not set")?;
+        let config = ApiConfig::load()?;
+        let _api_key = config.api_key.clone().context("API key not found. Please set OPENAI_API_KEY environment variable or configure it in the config file.")?;
 
         Ok(Self {
             client: Client::new(),
-            api_key,
+            config,
             messages: Vec::new(),
         })
+    }
+
+    pub fn get_config(&self) -> &ApiConfig {
+        &self.config
+    }
+
+    pub fn set_model(&mut self, model: ChatModel) -> Result<()> {
+        self.config.model = model;
+        self.config.save()?;
+        Ok(())
     }
 
     pub fn clear_context(&mut self) {
@@ -27,21 +38,23 @@ impl OpenAIClient {
     pub async fn chat(&mut self, prompt: &str) -> Result<String> {
         self.messages.push(Message::user(prompt));
         let request = ChatRequest {
-            model: "gpt-3.5-turbo".to_string(),
+            model: self.config.model.as_str().to_string(),
             messages: self.messages.clone(),
             stream: Some(false),
         };
-
         let response = self
             .client
             .post("https://api.openai.com/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header(
+                "Authorization",
+                format!("Bearer {}", self.config.api_key.clone().unwrap()),
+            )
             .json(&request)
             .send()
             .await?
             .json::<ChatResponse>()
             .await?;
-        
+
         let assitant_message = &response.choices[0].message.content;
         self.messages.push(Message::assistant(assitant_message));
         Ok(assitant_message.clone())
@@ -50,7 +63,7 @@ impl OpenAIClient {
     pub async fn chat_stream(&mut self, prompt: &str) -> Result<()> {
         self.messages.push(Message::user(prompt));
         let request = ChatRequest {
-            model: "gpt-3.5-turbo".to_string(),
+            model: self.config.model.as_str().to_string(),
             messages: self.messages.clone(),
             stream: Some(true),
         };
@@ -59,7 +72,10 @@ impl OpenAIClient {
         let mut response = self
             .client
             .post("https://api.openai.com/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", self.api_key))
+            .header(
+                "Authorization",
+                format!("Bearer {}", self.config.api_key.clone().unwrap()),
+            )
             .json(&request)
             .send()
             .await?;

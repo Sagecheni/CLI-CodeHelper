@@ -1,4 +1,4 @@
-use crate::api::OpenAIClient;
+use crate::api::{config::ChatModel, OpenAIClient};
 use crate::utils::display::DisplayManager;
 use anyhow::Result;
 use colored::Colorize;
@@ -20,7 +20,7 @@ pub async fn start_interactive_mode() -> Result<()> {
         let input = input.trim();
 
         match input {
-            "exit" | "quit" | "/exit" | "/quit" => {
+            "exit" | "quit" | "/exit" | "/quit" | "q" => {
                 println!("{}", "Goodbye!".bright_green());
                 return Ok(());
             }
@@ -42,8 +42,46 @@ pub async fn start_interactive_mode() -> Result<()> {
             "/help" => {
                 DisplayManager::print_help();
             }
+            "/model" => {
+                println!("\n{}", "Available models:".bright_black());
+                for (model, description) in ChatModel::list_available_models() {
+                    println!("{} - {}", model.bright_green(), description);
+                }
+                println!(
+                    "Current model: {}",
+                    client.get_config().model.as_str().bright_green()
+                );
+                println!(
+                    "\nTo change the model, use {} followed by the model name.",
+                    "/model".yellow()
+                );
+            }
+            input if input.starts_with("/model") => {
+                let model_name = input.trim_start_matches("/model ").trim();
+                let new_model = match model_name {
+                    "gpt-3.5-turbo" => ChatModel::Gpt35Turbo,
+                    "gpt-4o" => ChatModel::Gpt4o,
+                    "gpt-4o-mini" => ChatModel::Gpt4omini,
+                    _ => {
+                        DisplayManager::print_error(&format!(
+                            "Invalid model name : {}",
+                            model_name
+                        ));
+                        continue;
+                    }
+                };
+                client.set_model(new_model)?;
+                println!(
+                    "{} {}",
+                    "Model changed to:".bright_green(),
+                    client.get_config().model.as_str().bright_green()
+                );
+            }
             input if input.starts_with('/') && !VALID_COMMANDS.contains(&input) => {
-                DisplayManager::print_error(&format!("Unknown command. Type {} for help.", "/help".yellow()));
+                DisplayManager::print_error(&format!(
+                    "Unknown command. Type {} for help.",
+                    "/help".yellow()
+                ));
             }
             "" => continue,
             input => {
