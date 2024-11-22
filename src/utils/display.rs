@@ -17,6 +17,11 @@ impl DisplayManager {
             ("/context", "Show conversation history"),
             ("/help", "Show this help message"),
             ("/exit", "Exit the program"),
+            ("/model", "Show available models"),
+            (
+                "!",
+                "Generate and execute shell command (e.g., '! how to list files')",
+            ),
         ]
     }
 
@@ -69,6 +74,7 @@ impl DisplayManager {
             let (prefix, content) = match msg.role.as_str() {
                 "user" => ("You".green().bold(), msg.content.white()),
                 "assistant" => ("Assistant".blue().bold(), msg.content.white()),
+                "system" => ("System".yellow().bold(), msg.content.bright_black()),
                 _ => ("Unknown".red().bold(), msg.content.red()),
             };
 

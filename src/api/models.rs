@@ -26,6 +26,12 @@ impl Message {
             content: content.into(),
         }
     }
+    pub fn system(content: impl Into<String>) -> Self {
+        Self {
+            role: "system".to_string(),
+            content: content.into(),
+        }
+    }
 }
 
 #[derive(Debug, Deserialize)]

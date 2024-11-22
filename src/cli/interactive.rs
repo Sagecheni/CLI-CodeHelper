@@ -1,10 +1,52 @@
 use crate::api::{config::ChatModel, OpenAIClient};
+use crate::cli::shell::ShellCommand;
 use crate::utils::display::DisplayManager;
 use anyhow::Result;
 use colored::Colorize;
 use std::io;
 
 const VALID_COMMANDS: [&str; 6] = ["/stream", "/clear", "/exit", "/quit", "/help", "/new"];
+
+pub async fn handle_command_generation(
+    client: &mut OpenAIClient,
+    shell: &mut ShellCommand,
+    prompt: &str,
+) -> Result<()> {
+    let command = client.generate_shell_command(prompt).await?;
+    println!("\n{}", "Generated command:".cyan().bold());
+    println!("{}", command.yellow());
+    println!(
+        "\n{}",
+        "Do you want to execute this command? [y/N]:".bright_black()
+    );
+
+    let mut input = String::new();
+    std::io::stdin().read_line(&mut input)?;
+
+    match input.trim().to_lowercase().as_str() {
+        "y" | "yes" => {
+            shell.set_command(command);
+            match shell.execute() {
+                Ok(output) => {
+                    if !output.stdout.is_empty() {
+                        println!("{}", String::from_utf8_lossy(&output.stdout));
+                    }
+                    if !output.stderr.is_empty() {
+                        eprintln!("{}", String::from_utf8_lossy(&output.stderr).red());
+                    }
+                }
+                Err(e) => {
+                    println!("{}", format!("Failed to execute command: {}", e).red());
+                }
+            }
+        }
+        _ => {
+            println!("{}", "Command execution cancelled.".yellow());
+        }
+    }
+
+    Ok(())
+}
 
 pub async fn start_interactive_mode() -> Result<()> {
     let mut client = OpenAIClient::new()?;
@@ -82,6 +124,11 @@ pub async fn start_interactive_mode() -> Result<()> {
                     "Unknown command. Type {} for help.",
                     "/help".yellow()
                 ));
+            }
+            input if input.starts_with("!") => {
+                let prompt = input.trim_start_matches('!').trim();
+                let mut shell = ShellCommand::new()?;
+                handle_command_generation(&mut client, &mut shell, prompt).await?;
             }
             "" => continue,
             input => {

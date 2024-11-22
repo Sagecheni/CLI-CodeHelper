@@ -116,4 +116,31 @@ impl OpenAIClient {
     pub fn show_context(&self) -> Vec<&Message> {
         self.messages.iter().collect()
     }
+
+    pub async fn generate_shell_command(&mut self, prompt: &str) -> Result<String> {
+        // 保存当前消息历史
+        let original_messages = self.messages.clone();
+        let system_prompt = "You are a command line expert. Generate shell commands based on user descriptions. \
+                           Return ONLY the command itself, no markdown formatting, no backticks, no explanation. \
+                           The command should be a single line. \
+                           Ensure the command is safe and won't cause damage to the system.";
+        // 设置命令生成的系统提示
+        self.messages.clear();
+        self.messages.push(Message::system(system_prompt));
+        self.messages.push(Message::user(prompt));
+
+        // 获取响应
+        let response = self.chat(prompt).await?;
+
+        // 恢复原始消息历史
+        self.messages = original_messages;
+
+        Ok(response
+            .trim()
+            .replace("```shell", "")
+            .replace("```", "")
+            .replace("`", "")
+            .trim()
+            .to_string())
+    }
 }
